@@ -443,6 +443,26 @@ impl<T: PyClassImpl> PyClassObjectContents<T> {
     }
 }
 
+/// The largest alignment CPython guarantees for the memory backing an object.
+///
+/// pymalloc aligns to 16 bytes on 64-bit platforms and 8 bytes on 32-bit ones (`ALIGNMENT` in
+/// `Objects/obmalloc.c`); the extra data of a PEP 697 subclass is aligned no more strictly than
+/// that either.
+const MAX_PYCLASS_ALIGN: usize = if cfg!(target_pointer_width = "64") {
+    16
+} else {
+    8
+};
+
+/// Fails compilation of a `#[pyclass]` whose layout needs more alignment than Python provides.
+const fn assert_pyclass_alignment<L>() {
+    assert!(
+        core::mem::align_of::<L>() <= MAX_PYCLASS_ALIGN,
+        "#[pyclass] types cannot have an alignment greater than 16 bytes (8 bytes on 32-bit platforms); \
+         consider boxing the over-aligned field"
+    );
+}
+
 /// The layout of a PyClassObject with a known sized base class.
 #[repr(C)]
 pub struct PyStaticClassObject<T: PyClassImpl> {
@@ -460,6 +480,7 @@ impl<T: PyClassImpl<Layout = Self>> PyClassObjectLayout<T> for PyStaticClassObje
     };
 
     const BASIC_SIZE: ffi::Py_ssize_t = {
+        assert_pyclass_alignment::<Self>();
         let size = core::mem::size_of::<Self>();
         assert!(size <= ffi::Py_ssize_t::MAX as usize);
         size as _
@@ -594,6 +615,7 @@ impl<T: PyClass<Layout = Self>> PyClassObjectLayout<T> for PyVariableClassObject
     /// Gets the offset of the contents from the start of the struct in bytes.
     const CONTENTS_OFFSET: PyObjectOffset = PyObjectOffset::Relative(0);
     const BASIC_SIZE: ffi::Py_ssize_t = {
+        assert_pyclass_alignment::<PyClassObjectContents<T>>();
         let size = core::mem::size_of::<PyClassObjectContents<T>>();
         assert!(size <= ffi::Py_ssize_t::MAX as usize);
         // negative to indicate 'extra' space that cpython will allocate for us

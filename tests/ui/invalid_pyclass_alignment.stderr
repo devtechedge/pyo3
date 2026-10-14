@@ -1,0 +1,36 @@
+error[E0080]: evaluation panicked: #[pyclass] types cannot have an alignment greater than 16 bytes (8 bytes on 32-bit platforms); consider boxing the over-aligned field
+ --> src/pycell/impl_.rs
+  |
+  |         assert_pyclass_alignment::<Self>();
+  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation of `<pyo3::impl_::pycell::PyStaticClassObject<OverAligned> as pyo3::pycell::impl_::PyClassObjectLayout<OverAligned>>::BASIC_SIZE` failed inside this call
+  |
+note: inside `pycell::impl_::assert_pyclass_alignment::<pyo3::impl_::pycell::PyStaticClassObject<OverAligned>>`
+   --> $RUST_SRC/library/core/src/panic.rs:62:9
+    |
+ 62 |           $crate::panicking::panic_fmt($crate::const_format_args!($($t)+));
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the failure occurred here
+    |
+   ::: src/pycell/impl_.rs:459:5
+    |
+459 | /     assert!(
+460 | |         core::mem::align_of::<L>() <= MAX_PYCLASS_ALIGN,
+461 | |         "#[pyclass] types cannot have an alignment greater than 16 bytes (8 bytes on 32-bit platforms); \
+462 | |          consider boxing the over-aligned field"
+463 | |     );
+    | |_____- in this macro invocation
+
+note: erroneous constant encountered
+ --> src/pyclass/create_type_object.rs
+  |
+  |             <T as PyClassImpl>::Layout::BASIC_SIZE,
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: the above error was encountered while instantiating `fn pyo3::pyclass::create_type_object::create_type_object::<OverAligned>`
+ --> src/impl_/pyclass/lazy_type_object.rs
+  |
+  |             create_type_object::<T>,
+  |             ^^^^^^^^^^^^^^^^^^^^^^^
+
+error: aborting due to 1 previous error
+
+For more information about this error, try `rustc --explain E0080`.

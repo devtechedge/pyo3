@@ -142,6 +142,27 @@ This means that:
 For now, don't worry about these requirements; simple classes will already be thread-safe.
 There is a [detailed discussion on thread-safety](./class/thread-safety.md) later in the guide.
 
+#### Alignment
+
+CPython allocates instances with at most 16-byte alignment on 64-bit platforms (8-byte on 32-bit).
+A `#[pyclass]` whose layout needs a stricter alignment — for example via `#[repr(align(32))]` or a field such as `__m256` — therefore cannot be stored directly in the Python object.
+
+PyO3 rejects such types at compile time.
+Box the over-aligned field (or the whole value) so the `#[pyclass]` itself only needs the alignment Python provides:
+
+```rust
+# #![allow(dead_code)]
+# use pyo3::prelude::*;
+#[repr(align(32))]
+struct Aligned([f32; 8]);
+
+#[pyclass]
+struct HasAligned {
+    // `Aligned` directly as a field would not compile
+    data: Box<Aligned>,
+}
+```
+
 ## Constructor
 
 By default, it is not possible to create an instance of a custom class from Python code.

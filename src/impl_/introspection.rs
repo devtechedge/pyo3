@@ -189,12 +189,14 @@ mod tests {
     struct EmptyChild;
 
     #[pyclass(crate = "crate", subclass, frozen)]
-    struct SizedBase(#[allow(dead_code)] u64);
+    struct SizedBase(#[allow(dead_code)] u8);
 
     /// Adds no data, but is aligned more strictly than its base, so instances still grow.
-    /// The alignment is far larger than any base layout, so the padding always happens.
+    /// The base ends in a single byte, so at the largest alignment Python allows the padding
+    /// always happens.
     #[pyclass(crate = "crate", extends = SizedBase, frozen)]
-    #[repr(align(128))]
+    #[cfg_attr(target_pointer_width = "64", repr(align(16)))]
+    #[cfg_attr(not(target_pointer_width = "64"), repr(align(8)))]
     struct OverAligned;
 
     /// The condition `mypy.stubtest` checks, from the runtime type objects.

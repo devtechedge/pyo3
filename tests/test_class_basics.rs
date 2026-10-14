@@ -36,6 +36,33 @@ fn unit_class() {
     });
 }
 
+// The largest alignment Python guarantees for objects on 64-bit platforms.
+#[cfg(target_pointer_width = "64")]
+#[pyclass(subclass)]
+#[repr(align(16))]
+struct MaxAlignedClass(u8);
+
+#[cfg(target_pointer_width = "64")]
+#[pyclass(extends = MaxAlignedClass)]
+struct MaxAlignedSubclass;
+
+#[test]
+#[cfg(target_pointer_width = "64")]
+fn max_aligned_class() {
+    Python::attach(|py| {
+        let obj = Bound::new(py, MaxAlignedClass(1)).unwrap();
+        let value: &MaxAlignedClass = &obj.borrow();
+        assert_eq!(value.0, 1);
+        assert_eq!(core::ptr::from_ref(value).addr() % 16, 0);
+
+        let init = PyClassInitializer::from(MaxAlignedClass(2)).add_subclass(MaxAlignedSubclass);
+        let obj = Bound::new(py, init).unwrap();
+        let base: &MaxAlignedClass = &obj.as_super().borrow();
+        assert_eq!(base.0, 2);
+        assert_eq!(core::ptr::from_ref(base).addr() % 16, 0);
+    });
+}
+
 /// Line1
 ///Line2
 ///  Line3
